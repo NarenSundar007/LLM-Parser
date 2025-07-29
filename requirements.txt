@@ -12,22 +12,16 @@ PyMuPDF==1.23.8
 groq==0.11.0
 sentence-transformers==2.2.2
 transformers==4.35.2
-torch==2.1.0+cpu --index-url https://download.pytorch.org/whl/cpu
+torch==2.1.0
 faiss-cpu==1.7.4
 
 # Essential utilities only
 requests==2.31.0
 httpx==0.25.2
 numpy==1.24.3
+python-dotenv==1.0.0
 loguru==0.7.2
 
-# For better error handling
-python-dotenv==1.0.0
-python-dotenv==1.0.0
-
-# Logging and monitoring
-loguru==0.7.2
-
-# Testing
+# Testing (optional for deployment)
 pytest==7.4.3
 pytest-asyncio==0.21.1

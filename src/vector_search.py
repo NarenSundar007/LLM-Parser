@@ -1,5 +1,4 @@
 import numpy as np
-import openai
 import faiss
 import pickle
 import os
@@ -7,6 +6,13 @@ from typing import List, Dict, Any, Optional, Tuple
 from sentence_transformers import SentenceTransformer
 import asyncio
 from loguru import logger
+
+try:
+    import openai
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    logger.warning("OpenAI not available - using SentenceTransformers only")
 
 from .models import DocumentChunk, SearchResult
 from .config import settings
@@ -24,14 +30,20 @@ class EmbeddingGenerator:
             self.use_openai = False
             self.dimension = 384  # all-MiniLM-L6-v2 dimension
             logger.info("Using SentenceTransformers embeddings (FREE)")
-        else:
-            # Use OpenAI embeddings
-            import openai
+        elif OPENAI_AVAILABLE and settings.openai_api_key:
+            # Use OpenAI embeddings if available
             openai.api_key = settings.openai_api_key
             self.model_name = settings.embedding_model
             self.use_openai = True
             self.dimension = 1536  # OpenAI ada-002 dimension
             logger.info("Using OpenAI embeddings")
+        else:
+            # Fallback to SentenceTransformers if OpenAI not available
+            from sentence_transformers import SentenceTransformer
+            self.model = SentenceTransformer('all-MiniLM-L6-v2')
+            self.use_openai = False
+            self.dimension = 384
+            logger.warning("OpenAI not available, falling back to SentenceTransformers")
     
     async def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Generate embeddings for a list of texts."""
@@ -47,6 +59,9 @@ class EmbeddingGenerator:
     
     async def _generate_openai_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Generate embeddings using OpenAI API."""
+        if not OPENAI_AVAILABLE:
+            raise ImportError("OpenAI module not available")
+            
         try:
             # Process in batches to avoid API limits
             batch_size = 100

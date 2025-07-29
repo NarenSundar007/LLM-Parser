@@ -55,6 +55,7 @@ async def root():
         "status": "running",
         "docs": "/docs",
         "health": "/health",
+        "ready": "/ready",
         "endpoints": {
             "single_query": "/query",
             "batch_query": "/batch-query",
@@ -62,6 +63,15 @@ async def root():
             "search": "/search",
             "system_health": "/health"
         }
+    }
+
+@app.get("/ready")
+async def readiness_check():
+    """Simple readiness check that responds immediately."""
+    return {
+        "status": "ready",
+        "timestamp": "2025-07-29T09:26:00Z",
+        "service": "llm-query-system"
     }
 
 @app.get("/health", response_model=Dict[str, Any])

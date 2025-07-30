@@ -1,40 +1,27 @@
 version: '3.8'
 
 services:
-  query-retrieval-system:
-    build: .
+  llm-query-system:
+    build: 
+      context: .
+      dockerfile: Dockerfile.optimized
     ports:
       - "8000:8000"
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - PINECONE_API_KEY=${PINECONE_API_KEY}
-      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
-      - USE_PINECONE=false
-      - DEBUG=true
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - ENVIRONMENT=development
+      - PORT=8000
+      - LOG_LEVEL=INFO
     volumes:
       - ./data:/app/data
+      - llm_models:/app/models  # Cache models between runs
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/ready"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 
-  # Optional: Add Redis for caching
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    restart: unless-stopped
-    
-  # Optional: Add Nginx for load balancing
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-    depends_on:
-      - query-retrieval-system
-    restart: unless-stopped
+volumes:
+  llm_models:  # Persistent volume for ML models

@@ -1,0 +1,52 @@
+# Azure Container Apps configuration
+apiVersion: 2023-05-01
+location: eastus
+properties:
+  configuration:
+    ingress:
+      external: true
+      targetPort: 8000
+      allowInsecure: false
+      traffic:
+        - weight: 100
+          latestRevision: true
+    secrets:
+      - name: groq-api-key
+        value: "<your-groq-api-key>"
+  template:
+    containers:
+      - image: <your-registry>/llm-query-system:latest
+        name: llm-query-system
+        resources:
+          cpu: 1.0
+          memory: 2Gi
+        env:
+          - name: GROQ_API_KEY
+            secretRef: groq-api-key
+          - name: ENVIRONMENT
+            value: production
+          - name: PORT
+            value: "8000"
+          - name: LOG_LEVEL
+            value: INFO
+        probes:
+          - type: readiness
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          - type: liveness
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 30
+    scale:
+      minReplicas: 1
+      maxReplicas: 10
+      rules:
+        - name: http-requests
+          http:
+            metadata:
+              concurrentRequests: "100"

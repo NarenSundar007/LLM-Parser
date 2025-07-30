@@ -1,30 +1,27 @@
-# Core dependencies - optimized for Render free tier
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-pydantic==2.5.0
-pydantic-settings==2.1.0
-python-multipart==0.0.6
+# Core dependencies
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+python-multipart>=0.0.6
 
-# PDF processing - lightweight
-PyMuPDF==1.23.8
-pdfplumber==0.10.3
-tiktoken==0.5.2
+# PDF processing
+PyMuPDF>=1.23.0
+pdfplumber>=0.10.0
+tiktoken>=0.5.0
 
-# LLM and embeddings - memory optimized
-groq==0.11.0
-sentence-transformers==2.3.1
-transformers==4.36.2
-torch==2.1.0
-faiss-cpu==1.7.4
-huggingface_hub==0.20.3
+# LLM and embeddings
+google-generativeai>=0.3.0
+groq>=0.11.0
+sentence-transformers>=2.3.0
+transformers>=4.36.0
+torch>=2.1.0
+faiss-cpu>=1.7.0
+huggingface_hub>=0.20.0
 
-# Essential utilities only
-requests==2.31.0
-httpx==0.25.2
-numpy==1.24.3
-python-dotenv==1.0.0
-loguru==0.7.2
-
-# Testing (optional for deployment)
-pytest==7.4.3
-pytest-asyncio==0.21.1
+# Utilities
+requests>=2.31.0
+httpx>=0.25.0
+numpy>=1.24.0
+python-dotenv>=1.0.0
+loguru>=0.7.0

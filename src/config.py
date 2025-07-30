@@ -3,10 +3,13 @@ from typing import Optional
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    # Groq Configuration (Primary LLM Provider)
+    # Groq Configuration
     groq_api_key: str = ""
-    llm_provider: str = "groq"  # "groq" or "openai"
-    llm_model: str = "llama-3.1-8b-instant"  # Updated to available model  # Best free Groq model
+    
+    # Gemini Configuration (Primary LLM Provider)
+    gemini_api_key: str = ""
+    llm_provider: str = "gemini"  # "gemini", "groq", or "openai"
+    llm_model: str = "gemini-1.5-flash"  # Gemini model
     
     # OpenAI Configuration (Fallback/Embeddings)
     openai_api_key: str = ""
@@ -44,6 +47,7 @@ class Settings(BaseSettings):
     
     class Config:
         env_file = ".env"
+        extra = "ignore"  # Allow extra fields from .env file
 
 # Global settings instance
 settings = Settings()

@@ -7,7 +7,7 @@ from .models import ParsedQuery, QueryIntent
 from .config import settings
 
 class LLMParser:
-    """Handles query parsing and logic evaluation using Groq or OpenAI LLM."""
+    """Handles query parsing and logic evaluation using Gemini, Groq or OpenAI LLM."""
     
     def __init__(self):
         self.provider = settings.llm_provider
@@ -15,71 +15,92 @@ class LLMParser:
         self.temperature = settings.temperature
         self.max_tokens = settings.max_tokens
         
-        if self.provider == "groq":
+        if self.provider == "gemini":
             try:
-                # Try different import methods for Groq
-                try:
-                    from groq import Groq
-                    import httpx
-                    
-                    # Create custom HTTP client to avoid proxy issues
-                    custom_client = httpx.Client()
-                    
-                    # Initialize without proxy settings to avoid conflicts
-                    self.client = Groq(
-                        api_key=settings.groq_api_key,
-                        http_client=custom_client
-                    )
-                    logger.info(f"Initialized Groq client with model: {self.model}")
-                except (ImportError, AttributeError, TypeError) as e:
-                    # Handle different groq package versions and proxy issues
-                    logger.warning(f"Standard Groq import failed: {e}, trying alternative")
-                    import groq
-                    if hasattr(groq, 'Client'):
-                        self.client = groq.Client(api_key=settings.groq_api_key)
-                    elif hasattr(groq, 'Groq'):
-                        self.client = groq.Groq(api_key=settings.groq_api_key)
-                    else:
-                        raise ImportError("Cannot find Groq client class")
-                    logger.info(f"Initialized Groq client (alternative) with model: {self.model}")
+                # Use direct REST API approach to avoid library conflicts
+                import requests
+                self.client = "rest_api"  # Use REST API directly
+                self.gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
+                logger.info(f"Initialized Gemini REST API client with model: {self.model}")
+                
             except Exception as e:
-                logger.error(f"Failed to initialize Groq: {e}")
-                # Fall back to OpenAI if available
-                if settings.openai_api_key:
+                logger.error(f"Failed to initialize Gemini: {e}")
+                # Fall back to Groq if available
+                if settings.groq_api_key:
                     try:
-                        self.provider = "openai"
-                        from openai import OpenAI
-                        # Initialize OpenAI without proxy settings to avoid conflicts
-                        self.client = OpenAI(
-                            api_key=settings.openai_api_key,
-                            # Remove any proxy-related parameters
-                        )
-                        self.model = "gpt-3.5-turbo"
-                        logger.warning("Falling back to OpenAI due to Groq initialization error")
-                    except Exception as openai_error:
-                        logger.error(f"OpenAI initialization also failed: {openai_error}")
-                        self.provider = "fallback"
-                        self.client = None
-                        logger.warning("Using fallback mode - limited functionality")
+                        self.provider = "groq"
+                        self._init_groq()
+                    except Exception as groq_error:
+                        logger.error(f"Groq fallback also failed: {groq_error}")
+                        self._init_fallback()
                 else:
-                    # Use fallback mode without external APIs
-                    self.provider = "fallback"
-                    self.client = None
-                    logger.warning("Using fallback mode - limited functionality")
+                    self._init_fallback()
+                    
+        elif self.provider == "groq":
+            self._init_groq()
         else:
+            self._init_openai()
+    
+    def _init_groq(self):
+        """Initialize Groq client."""
+        try:
+            # Try different import methods for Groq
             try:
-                from openai import OpenAI
-                # Initialize OpenAI without proxy settings
-                self.client = OpenAI(
-                    api_key=settings.openai_api_key,
-                    # Remove any proxy-related parameters
+                from groq import Groq
+                import httpx
+                
+                # Create custom HTTP client to avoid proxy issues
+                custom_client = httpx.Client()
+                
+                # Initialize without proxy settings to avoid conflicts
+                self.client = Groq(
+                    api_key=settings.groq_api_key,
+                    http_client=custom_client
                 )
-                logger.info(f"Initialized OpenAI client with model: {self.model}")
-            except Exception as openai_error:
-                logger.error(f"OpenAI initialization failed: {openai_error}")
-                self.provider = "fallback"
-                self.client = None
-                logger.warning("Using fallback mode - limited functionality")
+                logger.info(f"Initialized Groq client with model: {self.model}")
+            except (ImportError, AttributeError, TypeError) as e:
+                # Handle different groq package versions and proxy issues
+                logger.warning(f"Standard Groq import failed: {e}, trying alternative")
+                import groq
+                if hasattr(groq, 'Client'):
+                    self.client = groq.Client(api_key=settings.groq_api_key)
+                elif hasattr(groq, 'Groq'):
+                    self.client = groq.Groq(api_key=settings.groq_api_key)
+                else:
+                    raise ImportError("Cannot find Groq client class")
+                logger.info(f"Initialized Groq client (alternative) with model: {self.model}")
+        except Exception as e:
+            logger.error(f"Failed to initialize Groq: {e}")
+            # Fall back to OpenAI if available
+            if settings.openai_api_key:
+                try:
+                    self.provider = "openai"
+                    self._init_openai()
+                except Exception as openai_error:
+                    logger.error(f"OpenAI initialization also failed: {openai_error}")
+                    self._init_fallback()
+            else:
+                self._init_fallback()
+    
+    def _init_openai(self):
+        """Initialize OpenAI client."""
+        try:
+            from openai import OpenAI
+            # Initialize OpenAI without proxy settings
+            self.client = OpenAI(
+                api_key=settings.openai_api_key,
+                # Remove any proxy-related parameters
+            )
+            logger.info(f"Initialized OpenAI client with model: {self.model}")
+        except Exception as openai_error:
+            logger.error(f"OpenAI initialization failed: {openai_error}")
+            self._init_fallback()
+    
+    def _init_fallback(self):
+        """Initialize fallback mode."""
+        self.provider = "fallback"
+        self.client = None
+        logger.warning("Using fallback mode - limited functionality")
     
     async def parse_query(self, query: str, context: Dict[str, Any] = None) -> ParsedQuery:
         """Parse natural language query into structured format."""
@@ -443,15 +464,67 @@ Generate comprehensive JSON response with ALL exact details:"""
         import asyncio
         import time
         
+    async def _call_llm(self, system_prompt: str, user_prompt: str, timeout: int = 10) -> str:
+        """Make API call to Gemini, Groq or OpenAI with timeout and retry logic."""
+        import asyncio
+        import time
+        
         async def make_api_call():
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ]
-            
-            if self.provider == "groq" and self.client:
+            if self.provider == "gemini" and self.client == "rest_api":
+                try:
+                    import requests
+                    
+                    # Combine system and user prompts for Gemini
+                    full_prompt = f"{system_prompt}\n\nUser Query: {user_prompt}"
+                    
+                    # Prepare request data
+                    data = {
+                        "contents": [{
+                            "parts": [{
+                                "text": full_prompt
+                            }]
+                        }],
+                        "generationConfig": {
+                            "temperature": 0.1,
+                            "maxOutputTokens": min(800, self.max_tokens),
+                        }
+                    }
+                    
+                    # Make REST API call
+                    headers = {
+                        "Content-Type": "application/json",
+                    }
+                    
+                    response = requests.post(
+                        f"{self.gemini_url}?key={settings.gemini_api_key}",
+                        json=data,
+                        headers=headers,
+                        timeout=timeout
+                    )
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        if "candidates" in result and len(result["candidates"]) > 0:
+                            content = result["candidates"][0]["content"]["parts"][0]["text"]
+                            return content.strip()
+                        else:
+                            logger.error(f"No content in Gemini response: {result}")
+                            return self._fallback_response(user_prompt)
+                    else:
+                        logger.error(f"Gemini API error: {response.status_code} - {response.text}")
+                        return self._fallback_response(user_prompt)
+                        
+                except Exception as gemini_error:
+                    logger.error(f"Gemini REST API call failed: {gemini_error}")
+                    return self._fallback_response(user_prompt)
+                    
+            elif self.provider == "groq" and self.client:
                 # Groq API call with faster settings
                 try:
+                    messages = [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ]
                     response = self.client.chat.completions.create(
                         model=self.model,
                         messages=messages,
@@ -465,6 +538,10 @@ Generate comprehensive JSON response with ALL exact details:"""
                     return self._fallback_response(user_prompt)
             elif self.provider == "openai":
                 # OpenAI API call (new v1.0+ syntax)
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ]
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=messages,

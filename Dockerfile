@@ -3,31 +3,31 @@ FROM python:3.9-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install minimal required system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
+# Copy only requirements first
 COPY requirements.txt .
 
-# Install Python dependencies
+# Install Python packages (cleaner and smaller)
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy only necessary source files (not everything!)
 COPY . .
 
-# Create data directory
+# Create only needed directories
 RUN mkdir -p data/uploads data/faiss_index
 
-# Expose port
+# Expose port used by Uvicorn
 EXPOSE 8000
 
-# Health check
+# Healthcheck
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run the application
+# Run the FastAPI app using Uvicorn
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

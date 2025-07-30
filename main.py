@@ -58,7 +58,7 @@ async def root():
         "ready": "/ready",
         "endpoints": {
             "single_query": "/query",
-            "batch_query": "/batch-query",
+            "batch_query": "/hackrx/run",
             "upload": "/upload",
             "search": "/search",
             "system_health": "/health"
@@ -222,7 +222,7 @@ async def get_statistics():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get statistics: {str(e)}")
 
-@app.post("/batch-query", response_model=BatchQueryResponse)
+@app.post("/hackrx/run", response_model=BatchQueryResponse)
 async def process_batch_queries(request: BatchQueryRequest):
     """
     Process multiple questions for a single document in batch.

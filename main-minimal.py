@@ -1,9 +1,19 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import os
-from typing import Dict, Any
+import requests
+from typing import Dict, Any, List
+from pydantic import BaseModel
+
+# Models for the API
+class BatchQueryRequest(BaseModel):
+    documents: str
+    questions: List[str]
+
+class BatchQueryResponse(BaseModel):
+    answers: List[str]
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -26,6 +36,7 @@ async def startup_event():
     """Initialize system on startup."""
     print("🚀 Starting LLM-Powered Query-Retrieval System (Minimal Version)...")
     print(f"🌐 Running on port: {os.getenv('PORT', 8000)}")
+    print("📝 Available endpoints: /hackrx/run")
 
 @app.get("/")
 async def root():
@@ -34,7 +45,11 @@ async def root():
         "message": "Welcome to LLM-Powered Intelligent Query-Retrieval System",
         "status": "running",
         "version": "1.0.0-minimal",
-        "docs": "/docs"
+        "docs": "/docs",
+        "endpoints": {
+            "batch_query": "/hackrx/run",
+            "health": "/health"
+        }
     }
 
 @app.get("/health", response_model=Dict[str, Any])
@@ -51,6 +66,25 @@ async def health_check():
 async def readiness_check():
     """Readiness check for Kubernetes/Container orchestration."""
     return {"status": "ready", "message": "Service is ready to accept requests"}
+
+@app.post("/hackrx/run", response_model=BatchQueryResponse)
+async def process_batch_queries(request: BatchQueryRequest):
+    """
+    Process multiple questions for a single document in batch.
+    
+    This is a minimal version that returns placeholder responses.
+    For full LLM functionality, deploy the complete version.
+    """
+    try:
+        # For now, return mock responses for each question
+        mock_answers = []
+        for i, question in enumerate(request.questions):
+            mock_answers.append(f"Mock answer {i+1}: This is a placeholder response for '{question[:50]}...' The full LLM system will provide detailed answers based on the document content.")
+        
+        return BatchQueryResponse(answers=mock_answers)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))

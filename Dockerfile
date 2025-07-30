@@ -11,10 +11,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy only requirements first
-COPY requirements.txt .
+COPY requirements-docker.txt ./
 
-# Install Python packages (cleaner and smaller)
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python packages
+RUN pip install --no-cache-dir --timeout=300 -r requirements-docker.txt
 
 # Copy only necessary source files (not everything!)
 COPY . .
